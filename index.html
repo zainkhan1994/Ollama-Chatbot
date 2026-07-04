@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ollama Chat — Spring AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;
+  --surface:#161b22;
+  --surface2:#21262d;
+  --border:#30363d;
+  --text:#e6edf3;
+  --muted:#8b949e;
+  --accent:#7c3aed;
+  --accent2:#a78bfa;
+  --green:#3fb950;
+  --blue:#58a6ff;
+  --orange:#f0883e;
+}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:'Inter',ui-sans-serif,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+}
+
+/* HEADER */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:52px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.header-left{display:flex;align-items:center;gap:10px}
+.logo{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,#7c3aed,#a78bfa);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+}
+.header-title{font-size:15px;font-weight:600}
+.header-sub{font-size:11px;color:var(--muted)}
+.status-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.header-right{display:flex;align-items:center;gap:8px}
+.mode-select{
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);font-size:12px;font-family:inherit;
+  padding:5px 10px;border-radius:6px;cursor:pointer;outline:none;
+}
+.mode-select:hover{border-color:var(--accent2)}
+.endpoint-tag{
+  font-size:11px;padding:4px 10px;border-radius:100px;
+  background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.35);
+  color:var(--accent2);font-family:'JetBrains Mono',monospace;
+}
+
+/* LAYOUT */
+.app{display:flex;height:calc(100vh - 52px)}
+
+/* SIDEBAR */
+aside{
+  width:220px;flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  padding:12px 0;
+  overflow-y:auto;
+}
+.aside-label{
+  font-size:10px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);
+  padding:0 14px 8px;
+}
+.aside-item{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;cursor:pointer;
+  font-size:13px;color:var(--muted);
+  transition:background .15s,color .15s;
+  border-left:2px solid transparent;
+}
+.aside-item:hover{background:var(--surface2);color:var(--text)}
+.aside-item.active{
+  background:rgba(124,58,237,0.1);
+  color:var(--accent2);
+  border-left-color:var(--accent);
+}
+.aside-icon{font-size:14px;width:18px;text-align:center}
+.aside-divider{height:1px;background:var(--border);margin:8px 14px}
+.aside-new{
+  margin:8px 14px;padding:8px 12px;
+  background:rgba(124,58,237,0.12);
+  border:1px solid rgba(124,58,237,0.3);
+  border-radius:8px;cursor:pointer;
+  font-size:12px;font-weight:500;color:var(--accent2);
+  text-align:center;transition:background .15s;
+}
+.aside-new:hover{background:rgba(124,58,237,0.2)}
+
+/* CHAT AREA */
+.chat-area{
+  flex:1;display:flex;flex-direction:column;
+  min-width:0;
+}
+.messages{
+  flex:1;overflow-y:auto;padding:24px;
+  display:flex;flex-direction:column;gap:20px;
+  scroll-behavior:smooth;
+}
+.messages::-webkit-scrollbar{width:6px}
+.messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* WELCOME */
+.welcome{
+  text-align:center;padding:60px 20px;
+  max-width:500px;margin:auto;
+}
+.welcome h2{font-size:22px;font-weight:600;margin-bottom:10px}
+.welcome p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px}
+.starter-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left}
+.starter{
+  padding:12px 14px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:10px;
+  cursor:pointer;font-size:12px;color:var(--muted);
+  transition:border-color .15s,color .15s;line-height:1.5;
+}
+.starter:hover{border-color:var(--accent2);color:var(--text)}
+.starter strong{display:block;font-size:13px;color:var(--text);margin-bottom:3px}
+
+/* MESSAGES */
+.msg{display:flex;gap:12px;align-items:flex-start}
+.msg.user{flex-direction:row-reverse}
+.avatar{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+}
+.avatar.ai{background:linear-gradient(135deg,#7c3aed,#a78bfa)}
+.avatar.user{background:var(--surface2);border:1px solid var(--border)}
+.bubble{
+  max-width:72%;padding:12px 16px;border-radius:12px;
+  font-size:14px;line-height:1.7;
+}
+.bubble.ai{
+  background:var(--surface2);border:1px solid var(--border);
+  border-top-left-radius:4px;
+}
+.bubble.user{
+  background:rgba(124,58,237,0.18);border:1px solid rgba(124,58,237,0.3);
+  color:var(--text);border-top-right-radius:4px;
+}
+.bubble pre{
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  background:rgba(0,0,0,0.3);border-radius:6px;
+  padding:10px 12px;margin:8px 0;overflow-x:auto;
+  border:1px solid var(--border);line-height:1.6;
+  white-space:pre-wrap;
+}
+.meta{font-size:11px;color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:6px}
+.meta .model-tag{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  padding:2px 6px;background:rgba(124,58,237,0.15);
+  border-radius:4px;color:var(--accent2);
+}
+.typing{display:flex;gap:4px;align-items:center;padding:4px 0}
+.typing span{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--muted);
+  animation:bounce .9s ease-in-out infinite;
+}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* INPUT */
+.input-area{
+  padding:16px 24px;border-top:1px solid var(--border);
+  background:var(--surface);flex-shrink:0;
+}
+.input-wrap{
+  display:flex;align-items:flex-end;gap:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;padding:10px 12px;
+  transition:border-color .15s;
+}
+.input-wrap:focus-within{border-color:var(--accent)}
+#msg-input{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--text);font-size:14px;font-family:inherit;
+  resize:none;max-height:160px;min-height:24px;line-height:1.5;
+}
+#msg-input::placeholder{color:var(--muted)}
+.send-btn{
+  width:34px;height:34px;border-radius:8px;border:none;
+  background:var(--accent);color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:background .15s,transform .1s;font-size:14px;
+}
+.send-btn:hover{background:#6d28d9}
+.send-btn:active{transform:scale(0.95)}
+.send-btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed}
+.input-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:8px;
+}
+.input-hint{font-size:11px;color:var(--muted)}
+.session-id{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--muted);background:var(--surface2);
+  padding:3px 8px;border-radius:4px;border:1px solid var(--border);
+}
+
+/* CONFIG PANEL */
+.config-panel{
+  width:240px;flex-shrink:0;
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  padding:16px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:16px;
+}
+.cfg-section{}
+.cfg-label{
+  font-size:10px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:8px;
+}
+.cfg-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cfg-key{font-size:12px;color:var(--muted)}
+.cfg-val{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent2)}
+input[type=range]{
+  width:100%;accent-color:var(--accent);cursor:pointer;
+}
+.cfg-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);font-size:12px;font-family:'JetBrains Mono',monospace;
+  padding:6px 8px;border-radius:6px;outline:none;
+  transition:border-color .15s;
+}
+.cfg-input:focus{border-color:var(--accent)}
+.arch-mini{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:12px;font-size:11px;
+  color:var(--muted);line-height:2;text-align:center;
+}
+.arch-mini .layer{
+  background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.25);
+  border-radius:6px;padding:4px 8px;color:var(--accent2);
+  font-family:'JetBrains Mono',monospace;font-size:10px;margin:2px 0;
+}
+.arch-mini .arrow{color:var(--muted);font-size:10px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-box{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 10px;text-align:center;
+}
+.stat-n{font-size:18px;font-weight:600;color:var(--text)}
+.stat-l{font-size:10px;color:var(--muted);margin-top:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">🦙</div>
+    <div>
+      <div class="header-title">Ollama Chat</div>
+      <div class="header-sub">Spring AI · Java 25</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-dot" id="status-dot" title="Backend status"></div>
+    <span class="endpoint-tag" id="endpoint-tag">localhost:8080</span>
+    <select class="mode-select" id="mode-select" onchange="switchMode(this.value)">
+      <option value="chatbot">💬 Chatbot</option>
+      <option value="rag">📄 RAG / Q&A</option>
+      <option value="search">🔍 Semantic Search</option>
+      <option value="extract">🗂️ Structured Extract</option>
+      <option value="classify">🏷️ Text Classify</option>
+    </select>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="aside-label">Sessions</div>
+    <div class="aside-item active" onclick="newChat()">
+      <span class="aside-icon">💬</span> New chat
+    </div>
+    <div class="aside-item" id="hist-1" style="display:none">
+      <span class="aside-icon">🕐</span> <span id="hist-1-label">Previous</span>
+    </div>
+    <div class="aside-divider"></div>
+    <div class="aside-label">Use Cases</div>
+    <div class="aside-item" onclick="switchModeFromSidebar('chatbot')">
+      <span class="aside-icon">💬</span> Chatbot
+    </div>
+    <div class="aside-item" onclick="switchModeFromSidebar('rag')">
+      <span class="aside-icon">📄</span> RAG / Q&A
+    </div>
+    <div class="aside-item" onclick="switchModeFromSidebar('search')">
+      <span class="aside-icon">🔍</span> Semantic Search
+    </div>
+    <div class="aside-item" onclick="switchModeFromSidebar('extract')">
+      <span class="aside-icon">🗂️</span> Structured Extract
+    </div>
+    <div class="aside-item" onclick="switchModeFromSidebar('classify')">
+      <span class="aside-icon">🏷️</span> Text Classify
+    </div>
+    <div class="aside-divider"></div>
+    <div class="aside-label">Links</div>
+    <div class="aside-item" onclick="window.open('https://github.com/zainkhan1994/Ollama-Chatbot','_blank')">
+      <span class="aside-icon">⚙️</span> GitHub
+    </div>
+    <div class="aside-item" onclick="window.open('https://docs.spring.io/spring-ai/reference/','_blank')">
+      <span class="aside-icon">📚</span> Spring AI Docs
+    </div>
+    <div class="aside-item" onclick="window.open('docs.html','_blank')">
+      <span class="aside-icon">🗺️</span> Architecture
+    </div>
+  </aside>
+
+  <!-- CHAT -->
+  <div class="chat-area">
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div style="font-size:48px;margin-bottom:16px">🦙</div>
+        <h2>Ollama Chat — Spring AI</h2>
+        <p id="mode-desc">A local LLM chatbot powered by Ollama and Spring AI. Conversations are stateful — the model remembers your session context.</p>
+        <div class="starter-grid" id="starters">
+          <div class="starter" onclick="sendStarter(this)">
+            <strong>What can you do?</strong>
+            Tell me about your capabilities and how Spring AI works.
+          </div>
+          <div class="starter" onclick="sendStarter(this)">
+            <strong>Explain embeddings</strong>
+            How do vector embeddings work for semantic search?
+          </div>
+          <div class="starter" onclick="sendStarter(this)">
+            <strong>RAG pipeline</strong>
+            Walk me through retrieval-augmented generation step by step.
+          </div>
+          <div class="starter" onclick="sendStarter(this)">
+            <strong>Spring AI setup</strong>
+            How do I configure Spring AI to use Ollama locally?
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea id="msg-input" placeholder="Message Ollama..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send">▶</button>
+      </div>
+      <div class="input-footer">
+        <span class="input-hint">Enter to send · Shift+Enter for new line</span>
+        <span class="session-id" id="session-display">session: <span id="sid-val">—</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="config-panel">
+    <div class="cfg-section">
+      <div class="cfg-label">Connection</div>
+      <div class="cfg-row">
+        <span class="cfg-key">Host</span>
+        <span class="cfg-val">localhost</span>
+      </div>
+      <input class="cfg-input" id="port-input" value="8080" placeholder="Port"
+        style="margin-bottom:8px" onchange="updateEndpoint()">
+      <input class="cfg-input" id="path-input" value="/chat" placeholder="Path"
+        onchange="updateEndpoint()">
+    </div>
+
+    <div class="cfg-section">
+      <div class="cfg-label">Model Config</div>
+      <div class="cfg-row">
+        <span class="cfg-key">Temperature</span>
+        <span class="cfg-val" id="temp-val">0.7</span>
+      </div>
+      <input type="range" min="0" max="1" step="0.1" value="0.7" id="temp-range"
+        oninput="document.getElementById('temp-val').textContent=this.value">
+      <div class="cfg-row" style="margin-top:10px">
+        <span class="cfg-key">Model</span>
+      </div>
+      <select class="cfg-input" id="model-select">
+        <option>mistral</option>
+        <option>llama3</option>
+        <option>phi3</option>
+        <option>gemma2</option>
+        <option>codellama</option>
+        <option>deepseek-r1</option>
+      </select>
+    </div>
+
+    <div class="cfg-section">
+      <div class="cfg-label">Architecture</div>
+      <div class="arch-mini">
+        <div class="layer">Your Browser</div>
+        <div class="arrow">↓ HTTP/SSE</div>
+        <div class="layer">Spring Boot :8080</div>
+        <div class="arrow">↓ Spring AI</div>
+        <div class="layer">Ollama :11434</div>
+        <div class="arrow">↓ Inference</div>
+        <div class="layer" id="arch-model-label">mistral</div>
+      </div>
+    </div>
+
+    <div class="cfg-section">
+      <div class="cfg-label">Session Stats</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-n" id="msg-count">0</div><div class="stat-l">messages</div></div>
+        <div class="stat-box"><div class="stat-n" id="tok-count">~0</div><div class="stat-l">tokens est.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let sessionId = 'sess-' + Math.random().toString(36).slice(2,9);
+let msgCount = 0;
+let tokCount = 0;
+let currentMode = 'chatbot';
+let isLoading = false;
+
+document.getElementById('sid-val').textContent = sessionId;
+
+const MODES = {
+  chatbot:{path:'/chat',desc:'A local LLM chatbot powered by Ollama and Spring AI. Conversations are stateful — the model remembers your session context.',param:'message'},
+  rag:{path:'/qa',desc:'Retrieval-Augmented Generation — ask questions grounded in documents loaded into your PGVector store.',param:'message'},
+  search:{path:'/search',desc:'Semantic vector search — find conceptually similar content even without exact keyword matches.',param:'query'},
+  extract:{path:'/extract',desc:'Structured data extraction — the LLM returns typed JSON objects from any unstructured text.',param:'text'},
+  classify:{path:'/classify',desc:'Zero-shot text classification — label, tag, or route any text without fine-tuning.',param:'text'}
+};
+
+function switchMode(m){
+  currentMode = m;
+  const cfg = MODES[m];
+  document.getElementById('path-input').value = cfg.path;
+  document.getElementById('mode-desc').textContent = cfg.desc;
+  updateEndpoint();
+}
+
+function switchModeFromSidebar(m){
+  document.getElementById('mode-select').value = m;
+  switchMode(m);
+}
+
+function updateEndpoint(){
+  const port = document.getElementById('port-input').value;
+  const path = document.getElementById('path-input').value;
+  document.getElementById('endpoint-tag').textContent = 'localhost:'+port;
+  const model = document.getElementById('model-select').value;
+  document.getElementById('arch-model-label').textContent = model;
+}
+
+document.getElementById('model-select').addEventListener('change',updateEndpoint);
+
+function autoResize(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,160)+'px';
+}
+
+function handleKey(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
+}
+
+function sendStarter(el){
+  const strong = el.querySelector('strong');
+  document.getElementById('msg-input').value = strong.textContent;
+  sendMessage();
+}
+
+async function sendMessage(){
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if(!text||isLoading) return;
+  input.value='';
+  input.style.height='auto';
+
+  hideWelcome();
+  appendUserMsg(text);
+  isLoading=true;
+  document.getElementById('send-btn').disabled=true;
+
+  const typingId = appendTyping();
+
+  const port = document.getElementById('port-input').value;
+  const path = document.getElementById('path-input').value;
+  const model = document.getElementById('model-select').value;
+  const temp = document.getElementById('temp-range').value;
+  const paramName = MODES[currentMode].param;
+  const url = `http://localhost:${port}${path}?${paramName}=${encodeURIComponent(text)}&chatId=${sessionId}&model=${model}&temperature=${temp}`;
+
+  try{
+    const res = await fetch(url,{method:'POST',headers:{'Accept':'text/event-stream,text/plain,*/*'}});
+    removeTyping(typingId);
+    if(res.ok){
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText='';
+      const msgId = appendAIMsg('',model);
+      while(true){
+        const {done,value}=await reader.read();
+        if(done) break;
+        const chunk=decoder.decode(value,{stream:true});
+        fullText+=chunk;
+        updateAIMsg(msgId,fullText);
+        tokCount+=Math.ceil(chunk.length/4);
+        document.getElementById('tok-count').textContent='~'+tokCount;
+      }
+      if(!fullText) updateAIMsg(msgId,'(empty response — check that the Spring Boot app is running on port '+port+')');
+    } else {
+      appendAIMsg('Server returned '+res.status+'. Make sure the Spring Boot app is running:\n```\ncd use-cases/chatbot\n./gradlew bootRun\n```',model);
+    }
+  } catch(err){
+    removeTyping(typingId);
+    const isConn = err.message.includes('Failed to fetch')||err.message.includes('NetworkError');
+    appendAIMsg(
+      isConn
+        ? 'Cannot reach the backend. Start it with:\n```\ncd use-cases/chatbot\n./gradlew bootRun\n```\nThen make sure Ollama is running: `ollama serve`'
+        : 'Error: '+err.message,
+      model
+    );
+  }
+
+  msgCount++;
+  document.getElementById('msg-count').textContent=msgCount;
+  isLoading=false;
+  document.getElementById('send-btn').disabled=false;
+  document.getElementById('msg-input').focus();
+}
+
+function hideWelcome(){
+  const w=document.getElementById('welcome');
+  if(w) w.remove();
+}
+
+function appendUserMsg(text){
+  const div=document.createElement('div');
+  div.className='msg user';
+  div.innerHTML=`<div class="avatar user">Z</div><div class="bubble user">${escHtml(text)}</div>`;
+  document.getElementById('messages').appendChild(div);
+  scrollBottom();
+}
+
+let aiCounter=0;
+function appendAIMsg(text,model){
+  const id='ai-'+aiCounter++;
+  const div=document.createElement('div');
+  div.className='msg';
+  div.innerHTML=`<div class="avatar ai">🦙</div><div><div class="bubble ai" id="${id}">${renderText(text)}</div><div class="meta"><span class="model-tag">${model||'mistral'}</span></div></div>`;
+  document.getElementById('messages').appendChild(div);
+  scrollBottom();
+  return id;
+}
+
+function updateAIMsg(id,text){
+  const el=document.getElementById(id);
+  if(el){el.innerHTML=renderText(text);scrollBottom();}
+}
+
+let typingCounter=0;
+function appendTyping(){
+  const id='typing-'+typingCounter++;
+  const div=document.createElement('div');
+  div.className='msg';div.id=id;
+  div.innerHTML=`<div class="avatar ai">🦙</div><div class="bubble ai"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  document.getElementById('messages').appendChild(div);
+  scrollBottom();
+  return id;
+}
+
+function removeTyping(id){
+  const el=document.getElementById(id);
+  if(el) el.remove();
+}
+
+function renderText(text){
+  const parts=text.split(/(```[\s\S]*?```|`[^`]+`)/g);
+  return parts.map((p,i)=>{
+    if(i%2===1){
+      if(p.startsWith('```')){
+        const code=p.replace(/^```[^\n]*\n?/,'').replace(/```$/,'');
+        return `<pre>${escHtml(code)}</pre>`;
+      }
+      return `<code style="font-family:'JetBrains Mono',monospace;font-size:12px;background:rgba(0,0,0,0.3);padding:2px 5px;border-radius:4px">${escHtml(p.slice(1,-1))}</code>`;
+    }
+    return escHtml(p).replace(/\n/g,'<br>');
+  }).join('');
+}
+
+function escHtml(t){
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function scrollBottom(){
+  const m=document.getElementById('messages');
+  m.scrollTop=m.scrollHeight;
+}
+
+function newChat(){
+  sessionId='sess-'+Math.random().toString(36).slice(2,9);
+  document.getElementById('sid-val').textContent=sessionId;
+  msgCount=0;tokCount=0;
+  document.getElementById('msg-count').textContent='0';
+  document.getElementById('tok-count').textContent='~0';
+  const msgs=document.getElementById('messages');
+  msgs.innerHTML=`<div class="welcome" id="welcome">
+    <div style="font-size:48px;margin-bottom:16px">🦙</div>
+    <h2>Ollama Chat — Spring AI</h2>
+    <p id="mode-desc">${MODES[currentMode].desc}</p>
+    <div class="starter-grid" id="starters">
+      <div class="starter" onclick="sendStarter(this)"><strong>What can you do?</strong>Tell me about your capabilities and how Spring AI works.</div>
+      <div class="starter" onclick="sendStarter(this)"><strong>Explain embeddings</strong>How do vector embeddings work for semantic search?</div>
+      <div class="starter" onclick="sendStarter(this)"><strong>RAG pipeline</strong>Walk me through retrieval-augmented generation step by step.</div>
+      <div class="starter" onclick="sendStarter(this)"><strong>Spring AI setup</strong>How do I configure Spring AI to use Ollama locally?</div>
+    </div>
+  </div>`;
+}
+
+// Ping backend status
+async function pingBackend(){
+  const port=document.getElementById('port-input').value;
+  try{
+    const r=await fetch('http://localhost:'+port+'/actuator/health',{signal:AbortSignal.timeout(2000)});
+    document.getElementById('status-dot').style.background=r.ok?'#3fb950':'#f0883e';
+  } catch{
+    document.getElementById('status-dot').style.background='#8b949e';
+  }
+}
+pingBackend();
+setInterval(pingBackend,15000);
+</script>
+</body>
+</html>
